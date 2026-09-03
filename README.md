@@ -115,3 +115,7 @@ js/game.js      entities, waves, input, game loop
 for tinkering from the console — `ND.spawnCapsule('lance')` drops a capsule on demand.
 `Sound.setMusicMode('chrono')` auditions a track without arming its power, and
 `Sound.debug()` reports the audio context state, active profile and tempo.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
