@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NEON DRIFT</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22%2304060f%22%2F%3E%3Cpath%20d%3D%22M9%206%20L25%2016%20L9%2026%20L13%2016%20Z%22%20fill%3D%22none%22%20stroke%3D%22%234ef3ff%22%20stroke-width%3D%222.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cy:#4ef3ff;
+    --mg:#ff3ea5;
+    --am:#ffcf5c;
+    --gr:#5cff9d;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:#02030a;overflow:hidden;cursor:crosshair;
+    color:#d7f2ff;
+    font-family:"Orbitron",ui-monospace,"SF Mono",Menlo,monospace;
+    -webkit-font-smoothing:antialiased;
+    user-select:none;
+  }
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #ui{position:fixed;inset:0;pointer-events:none;z-index:2}
+
+  .hud{position:absolute;opacity:0;transition:opacity .35s ease}
+  body[data-state="playing"] .hud,
+  body[data-state="paused"] .hud,
+  body[data-state="dead"] .hud{opacity:1}
+
+  #hudTL{top:26px;left:34px}
+  #hudTR{top:26px;right:34px;text-align:right}
+  #hudBL{bottom:24px;left:34px}
+  #hudBR{bottom:24px;right:34px;text-align:right}
+
+  .lbl{font-size:11px;letter-spacing:.34em;font-weight:700;color:#5f7fa8;margin-bottom:2px}
+  .val{font-size:40px;font-weight:900;line-height:1;letter-spacing:.04em;
+       color:#eafcff;text-shadow:0 0 8px rgba(78,243,255,.85),0 0 26px rgba(78,243,255,.45),0 0 60px rgba(78,243,255,.2);
+       font-variant-numeric:tabular-nums}
+  .val.sm{font-size:22px}
+  #mult{font-size:26px;font-weight:900;color:var(--am);
+        text-shadow:0 0 10px rgba(255,207,92,.9),0 0 34px rgba(255,140,40,.5);
+        letter-spacing:.05em;margin-top:6px;transition:transform .09s ease}
+  #mult.pop{transform:scale(1.32)}
+  #multbar{margin-top:7px;width:150px;height:3px;background:rgba(120,170,220,.16);overflow:hidden}
+  #multfill{height:100%;width:0%;background:linear-gradient(90deg,#ff8a3c,#ffcf5c);
+            box-shadow:0 0 12px rgba(255,180,70,.9);transition:width .12s linear}
+
+  .pips{display:flex;gap:9px;margin-top:6px}
+  #hudBR .pips{justify-content:flex-end}
+  .pip{width:15px;height:15px;transform:rotate(45deg);
+       border:2px solid rgba(120,170,220,.28)}
+  .pip.on{border-color:var(--cy);background:rgba(78,243,255,.35);
+          box-shadow:0 0 10px rgba(78,243,255,.9),inset 0 0 8px rgba(78,243,255,.6)}
+  .pip.bomb.on{border-color:var(--mg);background:rgba(255,62,165,.35);
+          box-shadow:0 0 10px rgba(255,62,165,.9),inset 0 0 8px rgba(255,62,165,.6)}
+
+  #hudPower{position:absolute;left:50%;bottom:32px;transform:translateX(-50%);text-align:center;
+            opacity:0;transition:opacity .22s ease}
+  body[data-state="playing"] #hudPower.on,
+  body[data-state="paused"] #hudPower.on{opacity:1}
+  #powerName{font-size:19px;font-weight:900;letter-spacing:.44em;text-indent:.44em;
+             color:var(--pc,#fff);
+             text-shadow:0 0 10px var(--pc,#fff),0 0 34px var(--pc,#fff),0 0 80px var(--pc,#fff)}
+  #powerBar{margin:9px auto 0;width:240px;height:3px;background:rgba(140,180,220,.16);overflow:hidden}
+  #powerFill{height:100%;width:100%;background:var(--pc,#fff);
+             box-shadow:0 0 14px var(--pc,#fff);transition:width .1s linear}
+
+  .powers{margin-top:26px;display:flex;flex-wrap:wrap;gap:9px 12px;justify-content:center;
+          max-width:min(760px,86vw)}
+  .powers span{font-size:10.5px;font-weight:700;letter-spacing:.24em;color:var(--pc);
+               border:1px solid var(--pc);padding:5px 11px;opacity:.82;
+               text-shadow:0 0 10px var(--pc)}
+  .ptag{margin-top:14px;font-size:10.5px;letter-spacing:.34em;color:#5f86ab}
+
+  #banner{position:absolute;left:0;right:0;top:41%;text-align:center;opacity:0}
+  #banner .b1{font-size:15px;letter-spacing:.85em;color:#7fd4ff;font-weight:700;
+              text-shadow:0 0 16px rgba(78,243,255,.7)}
+  #banner .b2{font-size:76px;font-weight:900;letter-spacing:.14em;margin-top:6px;
+              color:#fff;text-shadow:0 0 18px rgba(78,243,255,.9),0 0 70px rgba(255,62,165,.5)}
+  #banner.show{animation:bannerIn 2.1s cubic-bezier(.16,1,.3,1) forwards}
+  @keyframes bannerIn{
+    0%{opacity:0;transform:translateY(26px) scale(.9);filter:blur(14px)}
+    16%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+    72%{opacity:1;transform:translateY(0) scale(1)}
+    100%{opacity:0;transform:translateY(-16px) scale(1.05);filter:blur(8px)}
+  }
+
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;
+          align-items:center;justify-content:center;text-align:center;
+          background:radial-gradient(ellipse at center,rgba(4,8,22,.55) 0%,rgba(2,3,10,.9) 70%)}
+  body[data-state="title"] #title{display:flex}
+  body[data-state="gameover"] #over{display:flex}
+  body[data-state="paused"] #pause{display:flex}
+
+  .logo{font-size:clamp(46px,10.5vw,140px);font-weight:900;letter-spacing:.16em;line-height:.95;
+        color:#fff;
+        text-shadow:
+          0 0 6px #fff,
+          0 0 22px rgba(78,243,255,.95),
+          0 0 60px rgba(78,243,255,.6),
+          0 0 120px rgba(255,62,165,.45);
+        animation:flick 5.5s infinite}
+  .logo span{color:#ff8fd0;text-shadow:0 0 8px #fff,0 0 26px rgba(255,62,165,1),0 0 80px rgba(255,62,165,.6)}
+  @keyframes flick{
+    0%,100%{opacity:1}
+    47%{opacity:1}48%{opacity:.55}49%{opacity:1}
+    73%{opacity:1}73.6%{opacity:.4}74.2%{opacity:1}
+  }
+  .tag{margin-top:14px;font-size:12px;letter-spacing:.62em;color:#6f9ec9;font-weight:700}
+  .rule{width:min(520px,72vw);height:1px;margin:30px 0;
+        background:linear-gradient(90deg,transparent,rgba(78,243,255,.75),transparent)}
+  .keys{display:grid;grid-template-columns:auto auto;gap:9px 22px;font-size:12.5px;
+        letter-spacing:.13em;color:#8fb6d8}
+  .keys b{color:#eafcff;font-weight:700;text-shadow:0 0 10px rgba(78,243,255,.6)}
+  .keys i{font-style:normal;color:#63819f;text-align:left}
+  .start{margin-top:34px;font-size:15px;letter-spacing:.4em;font-weight:700;color:#fff;
+         text-shadow:0 0 14px rgba(78,243,255,.9);animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .best{margin-top:18px;font-size:12px;letter-spacing:.3em;color:#5f86ab}
+
+  .dead{font-size:clamp(34px,7vw,86px);font-weight:900;letter-spacing:.16em;color:#fff;
+        text-shadow:0 0 10px #fff,0 0 40px rgba(255,62,165,1),0 0 100px rgba(255,62,165,.5)}
+  .final{margin-top:26px;font-size:14px;letter-spacing:.4em;color:#7fa8c9}
+  .fbig{font-size:64px;font-weight:900;color:#eafcff;letter-spacing:.05em;margin-top:4px;
+        text-shadow:0 0 16px rgba(78,243,255,.9),0 0 60px rgba(78,243,255,.4);
+        font-variant-numeric:tabular-nums}
+  .stats{margin-top:22px;display:flex;gap:40px;font-size:12px;letter-spacing:.22em;color:#7fa8c9}
+  .stats b{display:block;font-size:26px;color:#fff;margin-top:6px;letter-spacing:.04em;
+           text-shadow:0 0 12px rgba(78,243,255,.7)}
+  .newbest{margin-top:16px;font-size:13px;letter-spacing:.44em;color:var(--am);font-weight:700;
+           text-shadow:0 0 16px rgba(255,207,92,.9);animation:pulse 1s infinite;display:none}
+  .newbest.show{display:block}
+
+  #fatal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+         padding:40px;text-align:center;font-size:14px;line-height:1.9;letter-spacing:.1em;color:#ff8fb0;z-index:9}
+</style>
+</head>
+<body data-state="title">
+<canvas id="gl"></canvas>
+
+<div id="ui">
+  <div class="hud" id="hudTL">
+    <div class="lbl">SCORE</div>
+    <div class="val" id="score">0</div>
+    <div id="mult">x1</div>
+    <div id="multbar"><div id="multfill"></div></div>
+  </div>
+
+  <div class="hud" id="hudTR">
+    <div class="lbl">WAVE</div>
+    <div class="val" id="wave">1</div>
+    <div class="lbl" style="margin-top:14px">BEST</div>
+    <div class="val sm" id="best">0</div>
+  </div>
+
+  <div class="hud" id="hudBL">
+    <div class="lbl">HULL</div>
+    <div class="pips" id="lives"></div>
+  </div>
+
+  <div class="hud" id="hudBR">
+    <div class="lbl">PULSE&nbsp;BOMBS</div>
+    <div class="pips" id="bombs"></div>
+  </div>
+
+  <div id="hudPower">
+    <div id="powerName">OVERDRIVE</div>
+    <div id="powerBar"><div id="powerFill"></div></div>
+  </div>
+
+  <div id="banner"><div class="b1" id="bannerSub">WAVE</div><div class="b2" id="bannerMain">1</div></div>
+
+  <div class="screen" id="title">
+    <div class="logo">NEON<span> DRIFT</span></div>
+    <div class="tag">VECTOR COMBAT PROTOCOL</div>
+    <div class="rule"></div>
+    <div class="keys">
+      <b>WASD / ARROWS</b><i>thrust</i>
+      <b>MOUSE</b><i>aim</i>
+      <b>HOLD FIRE / SPACE</b><i>shoot</i>
+      <b>SHIFT / RIGHT-CLICK</b><i>phase dash</i>
+      <b>E</b><i>pulse bomb</i>
+      <b>P / ESC</b><i>pause</i>
+      <b>GAMEPAD</b><i>twin stick supported</i>
+    </div>
+    <div class="powers">
+      <span style="--pc:#ffb03a">OVERDRIVE</span>
+      <span style="--pc:#4ef3ff">AEGIS</span>
+      <span style="--pc:#b45cff">CHRONO</span>
+      <span style="--pc:#8cff2e">SIPHON</span>
+      <span style="--pc:#ff3ea5">LANCE</span>
+      <span style="--pc:#2ee0c0">SWARM</span>
+    </div>
+    <div class="ptag">GRAB CAPSULES FOR SUPER POWERS</div>
+    <div class="start">CLICK OR PRESS ENTER TO ENGAGE</div>
+    <div class="best">HIGH SCORE&nbsp;&nbsp;<span id="titleBest">0</span></div>
+  </div>
+
+  <div class="screen" id="over">
+    <div class="dead">SIGNAL LOST</div>
+    <div class="final">FINAL SCORE</div>
+    <div class="fbig" id="finalScore">0</div>
+    <div class="stats">
+      <div>WAVES<b id="finalWave">1</b></div>
+      <div>KILLS<b id="finalKills">0</b></div>
+      <div>PEAK MULT<b id="finalMult">x1</b></div>
+    </div>
+    <div class="newbest" id="newBest">NEW HIGH SCORE</div>
+    <div class="start" style="margin-top:30px">PRESS ENTER TO RETRY</div>
+  </div>
+
+  <div class="screen" id="pause">
+    <div class="logo" style="font-size:clamp(30px,6vw,74px)">PAUSED</div>
+    <div class="start">PRESS P TO RESUME</div>
+  </div>
+</div>
+
+<div id="fatal"></div>
+
+<script src="js/gl.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/grid.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
