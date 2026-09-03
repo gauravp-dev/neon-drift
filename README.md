@@ -1,10 +1,15 @@
 # NEON DRIFT
 
+**[▶ Play it](https://gauravp-dev.github.io/neon-drift/)**
+
 A twin-stick neon vector shooter. Pure vanilla JavaScript + WebGL2 — no build step,
-no dependencies, no assets. Open `index.html` in a browser and play.
+no dependencies, no assets. Needs a browser with WebGL2 (any current Chrome, Firefox,
+Safari or Edge).
+
+To run it locally, just open the file — there is nothing to install or build:
 
 ```
-open neon-drift/index.html
+open index.html
 ```
 
 ## Controls
